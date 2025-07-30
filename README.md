@@ -33,8 +33,7 @@ A Django REST API for uploading, validating, and extracting information from rec
 
 1. **Clone the repository:**
    ```sh
-   git clone <your-repo-url>
-   cd <your-repo-directory>
+   git clone https://github.com/leelamayashatapathy/ocr_receipt_processing.git
    ```
 
 2. **Create and activate a virtual environment:**
