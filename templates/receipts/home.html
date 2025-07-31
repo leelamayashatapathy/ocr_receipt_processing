@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Receipt Processor{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center">
+                <h1 class="card-title mb-4">
+                    <i class="fas fa-receipt text-primary me-3"></i>
+                    Welcome to Receipt Processor
+                </h1>
+                <p class="card-text lead">
+                    Upload, validate, and process your receipts with our advanced OCR technology.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-upload fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Upload Receipts</h5>
+                <p class="card-text">Upload PDF receipts to start processing. We support various receipt formats.</p>
+                <a href="{% url 'receipts:upload' %}" class="btn btn-primary">
+                    <i class="fas fa-upload me-2"></i>Upload Now
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Validate & Process</h5>
+                <p class="card-text">Our system validates your receipts and extracts key information automatically.</p>
+                <a href="{% url 'receipts:receipts' %}" class="btn btn-success">
+                    <i class="fas fa-list me-2"></i>View Receipts
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-bar fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Track Expenses</h5>
+                <p class="card-text">Keep track of your expenses with detailed merchant and amount information.</p>
+                <a href="{% url 'receipts:receipts' %}" class="btn btn-info">
+                    <i class="fas fa-chart-bar me-2"></i>View Analytics
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>How It Works
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-file-pdf fa-2x text-danger"></i>
+                        </div>
+                        <h6>1. Upload PDF</h6>
+                        <p class="small text-muted">Upload your receipt as a PDF file</p>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-search fa-2x text-warning"></i>
+                        </div>
+                        <h6>2. Validate</h6>
+                        <p class="small text-muted">System validates the PDF format</p>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-cogs fa-2x text-primary"></i>
+                        </div>
+                        <h6>3. Process</h6>
+                        <p class="small text-muted">OCR extracts text and data</p>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-database fa-2x text-success"></i>
+                        </div>
+                        <h6>4. Store</h6>
+                        <p class="small text-muted">Data is stored and organized</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

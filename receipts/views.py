@@ -2,6 +2,18 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Sum, Q
+from django.views.generic import TemplateView, ListView, DetailView
+from django.http import JsonResponse
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
 from .models import ReceiptFile, Receipt
 from .serializers import ReceiptFileSerializer
 import os
@@ -15,7 +27,165 @@ import re
 from datetime import datetime
 import numpy as np
 from pdf2image import convert_from_path
+import json
 
+# Authentication Views
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        
+        user = authenticate(username=username, password=password)
+        
+        if user:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access_token': str(refresh.access_token),
+                'refresh_token': str(refresh),
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name
+                }
+            })
+        else:
+            return Response({'error': 'Invalid credentials'}, status=400)
+
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        username = request.data.get('username')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        first_name = request.data.get('first_name', '')
+        last_name = request.data.get('last_name', '')
+        
+        if User.objects.filter(username=username).exists():
+            return Response({'error': 'Username already exists'}, status=400)
+        
+        if User.objects.filter(email=email).exists():
+            return Response({'error': 'Email already exists'}, status=400)
+        
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name
+        )
+        
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access_token': str(refresh.access_token),
+            'refresh_token': str(refresh),
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name
+            }
+        })
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            refresh_token = request.data.get('refresh_token')
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({'message': 'Successfully logged out'})
+        except Exception:
+            return Response({'message': 'Successfully logged out'})
+
+# Template Views
+class HomeView(TemplateView):
+    template_name = 'receipts/home.html'
+
+class LoginTemplateView(TemplateView):
+    template_name = 'receipts/login.html'
+
+class RegisterTemplateView(TemplateView):
+    template_name = 'receipts/register.html'
+
+class UploadTemplateView(TemplateView):
+    template_name = 'receipts/upload.html'
+
+class ReceiptsListTemplateView(ListView):
+    model = Receipt
+    template_name = 'receipts/receipts_list.html'
+    context_object_name = 'receipts'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = Receipt.objects.all().order_by('-created_at')
+        
+        # Search functionality
+        search_query = self.request.GET.get('search')
+        if search_query:
+            queryset = queryset.filter(
+                Q(merchant_name__icontains=search_query) |
+                Q(total_amount__icontains=search_query)
+            )
+        
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Calculate summary statistics
+        receipts = Receipt.objects.all()
+        context['total_amount'] = receipts.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        context['processed_count'] = receipts.filter(total_amount__isnull=False).count()
+        context['pending_count'] = receipts.filter(total_amount__isnull=True).count()
+        
+        return context
+
+class ReceiptDetailTemplateView(DetailView):
+    model = Receipt
+    template_name = 'receipts/receipt_detail.html'
+    context_object_name = 'receipt'
+
+# Text Extraction View
+class ExtractTextView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, format=None):
+        file_id = request.data.get('file_id')
+        try:
+            receipt_file = ReceiptFile.objects.get(id=file_id)
+        except ReceiptFile.DoesNotExist:
+            return Response({'detail': 'Receipt not found.'}, status=404)
+
+        try:
+            poppler_path = r"C:\poppler\poppler-24.08.0\Library\bin"
+            images = convert_from_path(receipt_file.file_path, poppler_path=poppler_path)
+
+            raw_text = ''
+            for img in images:
+                raw_text += pytesseract.image_to_string(
+                    img,
+                    config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,$:/- '
+                )
+
+            return Response({
+                'extracted_text': raw_text,
+                'file_name': receipt_file.file_name
+            })
+
+        except Exception as e:
+            return Response({
+                'detail': 'Could not extract text from receipt.',
+                'error': str(e)
+            }, status=500)
+
+# API Views (existing)
 class UploadReceiptView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
@@ -72,8 +242,6 @@ class ValidateReceiptView(APIView):
             'is_valid': receipt_file.is_valid,
             'invalid_reason': receipt_file.invalid_reason
         })
-
-
 
 class ProcessReceiptView(APIView):
     def preprocess_ocr_text(self, text: str) -> str:
@@ -224,8 +392,6 @@ class ProcessReceiptView(APIView):
                 'error': str(e)
             }, status=500)
 
-
-
 class ReceiptsListView(APIView):
     def get(self, request, format=None):
         receipts = Receipt.objects.all()
@@ -253,3 +419,11 @@ class ReceiptDetailView(APIView):
             'file_path': r.file_path
         }
         return Response(data)
+
+    def delete(self, request, id, format=None):
+        try:
+            receipt = Receipt.objects.get(id=id)
+            receipt.delete()
+            return Response({'detail': 'Receipt deleted successfully.'}, status=204)
+        except Receipt.DoesNotExist:
+            return Response({'detail': 'Receipt not found.'}, status=404)
