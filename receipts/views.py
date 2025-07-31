@@ -3,17 +3,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Sum, Q
 from django.views.generic import TemplateView, ListView, DetailView
 from django.http import JsonResponse
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
 from .models import ReceiptFile, Receipt
 from .serializers import ReceiptFileSerializer
 import os
@@ -27,170 +22,145 @@ import re
 from datetime import datetime
 import numpy as np
 from pdf2image import convert_from_path
+import tempfile
 import json
+from django.contrib.auth.mixins import LoginRequiredMixin
 
-# Authentication Views
-class LoginView(APIView):
-    permission_classes = [AllowAny]
-    
-    def post(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password')
-        
-        user = authenticate(username=username, password=password)
-        
-        if user:
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'access_token': str(refresh.access_token),
-                'refresh_token': str(refresh),
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name
-                }
-            })
-        else:
-            return Response({'error': 'Invalid credentials'}, status=400)
 
-class RegisterView(APIView):
-    permission_classes = [AllowAny]
-    
-    def post(self, request):
-        username = request.data.get('username')
-        email = request.data.get('email')
-        password = request.data.get('password')
-        first_name = request.data.get('first_name', '')
-        last_name = request.data.get('last_name', '')
-        
-        if User.objects.filter(username=username).exists():
-            return Response({'error': 'Username already exists'}, status=400)
-        
-        if User.objects.filter(email=email).exists():
-            return Response({'error': 'Email already exists'}, status=400)
-        
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name
-        )
-        
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'access_token': str(refresh.access_token),
-            'refresh_token': str(refresh),
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name
-            }
-        })
-
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request):
-        try:
-            refresh_token = request.data.get('refresh_token')
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({'message': 'Successfully logged out'})
-        except Exception:
-            return Response({'message': 'Successfully logged out'})
 
 # Template Views
 class HomeView(TemplateView):
     template_name = 'receipts/home.html'
 
-class LoginTemplateView(TemplateView):
-    template_name = 'receipts/login.html'
 
-class RegisterTemplateView(TemplateView):
-    template_name = 'receipts/register.html'
 
 class UploadTemplateView(TemplateView):
     template_name = 'receipts/upload.html'
-
-class ReceiptsListTemplateView(ListView):
-    model = Receipt
+    
+class ReceiptsListTemplateView(TemplateView):
     template_name = 'receipts/receipts_list.html'
-    context_object_name = 'receipts'
-    paginate_by = 10
+    
+class ExtractTextTemplateView(TemplateView):
+    template_name = 'receipts/extract_text.html'
 
-    def get_queryset(self):
-        queryset = Receipt.objects.all().order_by('-created_at')
-        
-        # Search functionality
-        search_query = self.request.GET.get('search')
-        if search_query:
-            queryset = queryset.filter(
-                Q(merchant_name__icontains=search_query) |
-                Q(total_amount__icontains=search_query)
-            )
-        
-        return queryset
+# class ReceiptsListTemplateView(ListView):
+#     model = Receipt
+#     template_name = 'receipts/receipts_list.html'
+#     context_object_name = 'receipts'
+#     paginate_by = 10
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+#     def get_queryset(self):
+#         queryset = Receipt.objects.filter(user=self.request.user).order_by('-created_at')
         
-        # Calculate summary statistics
-        receipts = Receipt.objects.all()
-        context['total_amount'] = receipts.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-        context['processed_count'] = receipts.filter(total_amount__isnull=False).count()
-        context['pending_count'] = receipts.filter(total_amount__isnull=True).count()
+#         # Search functionality
+#         search_query = self.request.GET.get('search')
+#         if search_query:
+#             queryset = queryset.filter(
+#                 Q(merchant_name__icontains=search_query) |
+#                 Q(total_amount__icontains=search_query)
+#             )
         
-        return context
+#         return queryset
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+        
+#         # Calculate summary statistics
+#         receipts = Receipt.objects.filter(user=self.request.user)
+#         context['total_amount'] = receipts.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+#         context['processed_count'] = receipts.filter(total_amount__isnull=False).count()
+#         context['pending_count'] = receipts.filter(total_amount__isnull=True).count()
+        
+#         return context
 
 class ReceiptDetailTemplateView(DetailView):
     model = Receipt
     template_name = 'receipts/receipt_detail.html'
     context_object_name = 'receipt'
+    
+    # def get_queryset(self):
+    #     return Receipt.objects.filter(user=self.request.user)
 
-# Text Extraction View
+
 class ExtractTextView(APIView):
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request, format=None):
-        file_id = request.data.get('file_id')
-        try:
-            receipt_file = ReceiptFile.objects.get(id=file_id)
-        except ReceiptFile.DoesNotExist:
-            return Response({'detail': 'Receipt not found.'}, status=404)
+        uploaded_file = request.FILES.get('file')
+
+        if not uploaded_file:
+            return Response({'detail': 'No file uploaded.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not uploaded_file.name.endswith('.pdf'):
+            return Response({'detail': 'Only PDF files are supported.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            poppler_path = r"C:\poppler\poppler-24.08.0\Library\bin"
-            images = convert_from_path(receipt_file.file_path, poppler_path=poppler_path)
+            # Save the uploaded file to a temporary location
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+                for chunk in uploaded_file.chunks():
+                    temp_file.write(chunk)
+                temp_path = temp_file.name
 
-            raw_text = ''
-            for img in images:
-                raw_text += pytesseract.image_to_string(
-                    img,
-                    config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,$:/- '
-                )
+            # Open PDF and extract text
+            doc = fitz.open(temp_path)
+            full_text = ''
+            for page in doc:
+                full_text += page.get_text()
 
-            return Response({
-                'extracted_text': raw_text,
-                'file_name': receipt_file.file_name
-            })
+            doc.close()
+
+            return Response({'text': full_text.strip()})
 
         except Exception as e:
-            return Response({
-                'detail': 'Could not extract text from receipt.',
-                'error': str(e)
-            }, status=500)
+            return Response(
+                {'detail': 'Failed to extract text from the PDF.', 'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+# Text Extraction View
+# class ExtractTextView(APIView):
+#     permission_classes = [IsAuthenticated]
+    
+#     def post(self, request, format=None):
+#         file_id = request.data.get('file_id')
+#         try:
+#             receipt_file = ReceiptFile.objects.get(id=file_id, user=request.user)
+#         except ReceiptFile.DoesNotExist:
+#             return Response({'detail': 'Receipt not found.'}, status=404)
+
+#         try:
+#             poppler_path = r"C:\poppler\poppler-24.08.0\Library\bin"
+#             images = convert_from_path(receipt_file.file_path, poppler_path=poppler_path)
+
+#             raw_text = ''
+#             for img in images:
+#                 raw_text += pytesseract.image_to_string(
+#                     img,
+#                     config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,$:/- '
+#                 )
+
+#             return Response({
+#                 'extracted_text': raw_text,
+#                 'file_name': receipt_file.file_name
+#             })
+
+#         except Exception as e:
+#             return Response({
+#                 'detail': 'Could not extract text from receipt.',
+#                 'error': str(e)
+#             }, status=500)
 
 # API Views (existing)
 class UploadReceiptView(APIView):
     parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, format=None):
         file_obj = request.FILES.get('file')
+        print(f"File object: {file_obj}")
+        print(f"User: {request.user}")
+        print(f"User authenticated: {request.user.is_authenticated}")
+        
         if not file_obj or not file_obj.name.lower().endswith('.pdf'):
             return Response({'detail': 'Invalid file. Only PDFs allowed.'}, status=400)
 
@@ -212,20 +182,28 @@ class UploadReceiptView(APIView):
             for chunk in file_obj.chunks():
                 destination.write(chunk)
 
-        receipt_file = ReceiptFile.objects.create(
-            file_name=file_name,
-            file_path=file_path,
-            is_valid=False,
-            is_processed=False
-        )
-        serializer = ReceiptFileSerializer(receipt_file)
-        return Response(serializer.data, status=201)
+        try:
+            receipt_file = ReceiptFile.objects.create(
+                user=request.user,
+                file_name=file_name,
+                file_path=file_path,
+                is_valid=False,
+                is_processed=False
+            )
+            serializer = ReceiptFileSerializer(receipt_file)
+            print(f"Created receipt file: {serializer.data}")
+            return Response(serializer.data, status=201)
+        except Exception as e:
+            print(f"Error creating receipt file: {e}")
+            return Response({'detail': f'Error saving file: {str(e)}'}, status=500)
 
 class ValidateReceiptView(APIView):
+    permission_classes = [IsAuthenticated]
+    
     def post(self, request, format=None):
         file_id = request.data.get('file_id')
         try:
-            receipt_file = ReceiptFile.objects.get(id=file_id)
+            receipt_file = ReceiptFile.objects.get(id=file_id, user=request.user)
         except ReceiptFile.DoesNotExist:
             return Response({'detail': 'Receipt not found.'}, status=404)
         try:
@@ -244,6 +222,8 @@ class ValidateReceiptView(APIView):
         })
 
 class ProcessReceiptView(APIView):
+    permission_classes = [IsAuthenticated]
+    
     def preprocess_ocr_text(self, text: str) -> str:
         text = re.sub(r'(\d{1,2}/\d{1,2}/\d{2})(\d{1,2}:\d{2}[APMapm]{2})', r'\1 \2', text)
         return text
@@ -251,7 +231,7 @@ class ProcessReceiptView(APIView):
     def post(self, request, format=None):
         file_id = request.data.get('file_id')
         try:
-            receipt_file = ReceiptFile.objects.get(id=file_id)
+            receipt_file = ReceiptFile.objects.get(id=file_id, user=request.user)
         except ReceiptFile.DoesNotExist:
             return Response({'detail': 'Receipt not found.'}, status=404)
 
@@ -371,6 +351,7 @@ class ProcessReceiptView(APIView):
 
          
             receipt = Receipt.objects.create(
+                user=request.user,
                 purchased_at=purchased_at,
                 merchant_name=merchant_name,
                 total_amount=total_amount,
@@ -393,8 +374,11 @@ class ProcessReceiptView(APIView):
             }, status=500)
 
 class ReceiptsListView(APIView):
+    permission_classes = [IsAuthenticated]
+    
     def get(self, request, format=None):
-        receipts = Receipt.objects.all()
+        user = request.user
+        receipts = Receipt.objects.filter(user=user)
         data = [
             {
                 'id': r.id,
@@ -406,9 +390,11 @@ class ReceiptsListView(APIView):
         return Response(data)
 
 class ReceiptDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
     def get(self, request, id, format=None):
         try:
-            r = Receipt.objects.get(id=id)
+            r = Receipt.objects.get(id=id, user=request.user)
         except Receipt.DoesNotExist:
             return Response({'detail': 'Receipt not found.'}, status=404)
         data = {
@@ -422,7 +408,7 @@ class ReceiptDetailView(APIView):
 
     def delete(self, request, id, format=None):
         try:
-            receipt = Receipt.objects.get(id=id)
+            receipt = Receipt.objects.get(id=id, user=request.user)
             receipt.delete()
             return Response({'detail': 'Receipt deleted successfully.'}, status=204)
         except Receipt.DoesNotExist:

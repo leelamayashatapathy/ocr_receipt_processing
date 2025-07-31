@@ -110,12 +110,12 @@
             } else {
                 authNav.innerHTML = `
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'receipts:login' %}">
+                        <a class="nav-link" href="{% url 'accounts:login' %}">
                             <i class="fas fa-sign-in-alt me-1"></i>Login
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'receipts:register' %}">
+                        <a class="nav-link" href="{% url 'accounts:register' %}">
                             <i class="fas fa-user-plus me-1"></i>Register
                         </a>
                     </li>
@@ -168,7 +168,7 @@
 
         async function logout() {
             try {
-                const response = await fetch('{% url "receipts:api-logout" %}', {
+                const response = await fetch('{% url "accounts:api-logout" %}', {
                     method: 'POST',
                     headers: {
                         'Authorization': 'Bearer ' + localStorage.getItem('access_token'),

@@ -4,117 +4,79 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">
-                    <i class="fas fa-upload me-2"></i>Upload Receipt
-                </h4>
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h4 class="mb-0"><i class="fas fa-upload me-2"></i>Upload Receipt</h4>
+      </div>
+      <div class="card-body">
+        <form id="uploadForm" enctype="multipart/form-data" method="post">
+          {% csrf_token %}
+          <div class="mb-4">
+            <div class="upload-area" id="uploadArea">
+              <div class="text-center p-5">
+                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                <h5>Drag & Drop your PDF receipt here</h5>
+                <p class="text-muted">or click to browse files</p>
+                <input type="file" id="fileInput" name="file" accept=".pdf" class="d-none" required>
+                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                  <i class="fas fa-folder-open me-2"></i>Choose File
+                </button>
+              </div>
             </div>
-            <div class="card-body">
-                <form id="uploadForm" enctype="multipart/form-data" method="post">
-                    {% csrf_token %}
-                    <div class="mb-4">
-                        <div class="upload-area" id="uploadArea">
-                            <div class="text-center p-5">
-                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                                <h5>Drag & Drop your PDF receipt here</h5>
-                                <p class="text-muted">or click to browse files</p>
-                                <input type="file" id="fileInput" name="file" accept=".pdf" class="d-none" required>
-                                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
-                                    <i class="fas fa-folder-open me-2"></i>Choose File
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="fileInfo" class="alert alert-info d-none">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-file-pdf me-2"></i>
-                            <span id="fileName"></span>
-                            <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="clearFile()">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>
-                            <i class="fas fa-upload me-2"></i>Upload Receipt
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+          </div>
 
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-info-circle me-2"></i>Upload Guidelines
-                </h5>
+          <div id="fileInfo" class="alert alert-info d-none">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-file-pdf me-2"></i>
+              <span id="fileName"></span>
+              <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="clearFile()">
+                <i class="fas fa-times"></i>
+              </button>
             </div>
-            <div class="card-body">
-                <ul class="list-unstyled mb-0">
-                    <li class="mb-2">
-                        <i class="fas fa-check text-success me-2"></i>
-                        Only PDF files are supported
-                    </li>
-                    <li class="mb-2">
-                        <i class="fas fa-check text-success me-2"></i>
-                        Maximum file size: 10MB
-                    </li>
-                    <li class="mb-2">
-                        <i class="fas fa-check text-success me-2"></i>
-                        Ensure the receipt is clearly visible and readable
-                    </li>
-                    <li class="mb-2">
-                        <i class="fas fa-check text-success me-2"></i>
-                        Supported languages: English
-                    </li>
-                </ul>
-            </div>
-        </div>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>
+              <i class="fas fa-upload me-2"></i>Upload Receipt
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <style>
 .upload-area {
-    border: 2px dashed #dee2e6;
-    border-radius: 0.375rem;
-    transition: all 0.3s ease;
-    cursor: pointer;
+  border: 2px dashed #dee2e6;
+  border-radius: 0.375rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
-
 .upload-area:hover {
-    border-color: #0d6efd;
-    background-color: #f8f9fa;
+  border-color: #0d6efd;
+  background-color: #f8f9fa;
 }
-
 .upload-area.dragover {
-    border-color: #0d6efd;
-    background-color: #e7f3ff;
+  border-color: #0d6efd;
+  background-color: #e7f3ff;
 }
-
 .upload-area.dragover i {
-    color: #0d6efd !important;
+  color: #0d6efd !important;
 }
 </style>
 
 <script>
-// Check authentication on page load
-document.addEventListener('DOMContentLoaded', function() {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
-    if (!user) {
-        alert('Please login to upload receipts.');
-        window.location.href = '{% url "receipts:login" %}';
-        return;
-    }
+document.addEventListener('DOMContentLoaded', function () {
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    alert('Please log in.');
+    window.location.href = '{% url "accounts:login" %}';
+    return;
+  }
 });
 
 const uploadArea = document.getElementById('uploadArea');
@@ -124,94 +86,123 @@ const fileName = document.getElementById('fileName');
 const submitBtn = document.getElementById('submitBtn');
 const uploadForm = document.getElementById('uploadForm');
 
-// Drag and drop functionality
 uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('dragover');
+  e.preventDefault();
+  uploadArea.classList.add('dragover');
 });
 
 uploadArea.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('dragover');
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
 });
 
 uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('dragover');
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        handleFile(files[0]);
-    }
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    handleFile(files[0]);
+  }
 });
 
-uploadArea.addEventListener('click', () => {
-    fileInput.click();
-});
-
+uploadArea.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-        handleFile(e.target.files[0]);
-    }
+  if (e.target.files.length > 0) {
+    handleFile(e.target.files[0]);
+  }
 });
 
 function handleFile(file) {
-    if (file.type !== 'application/pdf') {
-        alert('Please select a PDF file.');
-        return;
-    }
-    
-    if (file.size > 10 * 1024 * 1024) { // 10MB
-        alert('File size must be less than 10MB.');
-        return;
-    }
-    
-    fileName.textContent = file.name;
-    fileInfo.classList.remove('d-none');
-    submitBtn.disabled = false;
+  if (file.type !== 'application/pdf') {
+    alert('Please select a PDF file.');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    alert('File size must be less than 10MB.');
+    return;
+  }
+  fileName.textContent = file.name;
+  fileInfo.classList.remove('d-none');
+  submitBtn.disabled = false;
 }
 
 function clearFile() {
-    fileInput.value = '';
-    fileInfo.classList.add('d-none');
-    submitBtn.disabled = true;
+  fileInput.value = '';
+  fileInfo.classList.add('d-none');
+  submitBtn.disabled = true;
 }
 
 uploadForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const formData = new FormData(uploadForm);
-    const submitBtn = document.getElementById('submitBtn');
-    
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
-    
-    try {
-        const response = await fetch('{% url "receipts:api-upload" %}', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            // Show success message and redirect
-            alert('Receipt uploaded successfully!');
-            window.location.href = '{% url "receipts:receipts" %}';
-        } else {
-            alert('Error: ' + result.detail);
-        }
-    } catch (error) {
-        alert('An error occurred while uploading the file.');
-        console.error('Upload error:', error);
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload Receipt';
+  e.preventDefault();
+
+  const formData = new FormData(uploadForm);
+  const token = localStorage.getItem('access_token');
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+
+  try {
+    // 1. Upload the file
+    const uploadRes = await fetch('{% url "receipts:api-upload" %}', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-CSRFToken': csrfToken
+      }
+    });
+
+    const uploadData = await uploadRes.json();
+
+    if (!uploadRes.ok) {
+      throw new Error(uploadData.detail || 'Upload failed');
     }
+
+    const fileId = uploadData.id;
+
+    // 2. Validate file
+    const validateRes = await fetch('{% url "receipts:api-validate" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({ file_id: fileId })
+    });
+
+    const validateData = await validateRes.json();
+    if (!validateData.is_valid) {
+      throw new Error('Invalid receipt: ' + validateData.invalid_reason);
+    }
+
+    // 3. Process file
+    const processRes = await fetch('{% url "receipts:api-process" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({ file_id: fileId })
+    });
+
+    const processData = await processRes.json();
+    if (!processRes.ok) {
+      throw new Error(processData.detail || 'Processing failed');
+    }
+
+    alert('Receipt uploaded and processed successfully!');
+    window.location.href = '{% url "receipts:receipts" %}';
+
+  } catch (err) {
+    console.error(err);
+    alert('Error: ' + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload Receipt';
+  }
 });
 </script>
-{% endblock %} 
+{% endblock %}

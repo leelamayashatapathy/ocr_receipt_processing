@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Extract Text from Receipt{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-file-alt me-2"></i>Extract Text from Receipt</h4>
+            </div>
+            <div class="card-body">
+                <form id="extractForm" enctype="multipart/form-data" method="post">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <input type="file" id="textFileInput" name="file" accept=".pdf" required class="form-control">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-search me-2"></i>Extract Text
+                        </button>
+                    </div>
+                </form>
+                <div id="textResult" class="mt-4 d-none">
+                    <h5>Extracted Text:</h5>
+                    <pre class="p-3 bg-light border rounded" id="extractedText"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('extractForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const resultBox = document.getElementById('textResult');
+    const extractedTextEl = document.getElementById('extractedText');
+
+    try {
+        const response = await fetch('{% url "receipts:api-extract-text" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            resultBox.classList.remove('d-none');
+            extractedTextEl.textContent = data.text;
+        } else {
+            alert('Error extracting text: ' + (data.detail || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('An unexpected error occurred.');
+        console.error('Text Extraction Error:', error);
+    }
+});
+</script>
+{% endblock %}

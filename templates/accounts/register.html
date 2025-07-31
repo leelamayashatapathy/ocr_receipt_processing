@@ -29,8 +29,8 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                        <label for="username" class="form-label">Username (Optional)</label>
+                        <input type="text" class="form-control" id="username" name="username">
                     </div>
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
@@ -55,7 +55,7 @@
                 
                 <div class="text-center">
                     <p class="mb-0">Already have an account?</p>
-                    <a href="{% url 'receipts:login' %}" class="btn btn-outline-secondary btn-sm">
+                    <a href="{% url 'accounts:login' %}" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-sign-in-alt me-2"></i>Login
                     </a>
                 </div>
@@ -86,7 +86,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     
     const formData = new FormData(e.target);
     const data = {
-        username: formData.get('username'),
+        username: formData.get('username') || '',
         email: formData.get('email'),
         password: formData.get('password'),
         first_name: formData.get('first_name'),
@@ -94,7 +94,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     };
     
     try {
-        const response = await fetch('{% url "receipts:api-register" %}', {
+        const response = await fetch('{% url "accounts:api-register" %}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -6,16 +6,12 @@ app_name = 'receipts'
 urlpatterns = [
     # Template-based URLs (Web Interface)
     path('', views.HomeView.as_view(), name='home'),
-    path('login/', views.LoginTemplateView.as_view(), name='login'),
-    path('register/', views.RegisterTemplateView.as_view(), name='register'),
     path('upload/', views.UploadTemplateView.as_view(), name='upload'),
     path('receipts/', views.ReceiptsListTemplateView.as_view(), name='receipts'),
+    path('extract-text/', views.ExtractTextTemplateView.as_view(), name='extract-text'),
     path('receipts/<int:pk>/', views.ReceiptDetailTemplateView.as_view(), name='receipt-detail'),
     
-    # API URLs (existing)
-    path('api/register/', views.RegisterView.as_view(), name='api-register'),
-    path('api/login/', views.LoginView.as_view(), name='api-login'),
-    path('api/logout/', views.LogoutView.as_view(), name='api-logout'),
+    # API URLs
     path('api/upload/', views.UploadReceiptView.as_view(), name='api-upload'),
     path('api/validate/', views.ValidateReceiptView.as_view(), name='api-validate'),
     path('api/process/', views.ProcessReceiptView.as_view(), name='api-process'),

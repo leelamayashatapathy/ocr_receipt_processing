@@ -19,9 +19,7 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fas fa-search"></i>
-                            </span>
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
                             <input type="text" class="form-control" id="searchInput" placeholder="Search receipts...">
                         </div>
                     </div>
@@ -30,7 +28,6 @@
                             <option value="">All Status</option>
                             <option value="processed">Processed</option>
                             <option value="pending">Pending</option>
-                            <option value="error">Error</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -56,164 +53,9 @@
                             </tr>
                         </thead>
                         <tbody id="receiptsTableBody">
-                            {% for receipt in receipts %}
-                            <tr data-receipt-id="{{ receipt.id }}">
-                                <td>{{ receipt.id }}</td>
-                                <td>
-                                    <strong>{{ receipt.merchant_name|default:"Unknown" }}</strong>
-                                </td>
-                                <td>
-                                    {% if receipt.total_amount %}
-                                        <span class="badge bg-success">${{ receipt.total_amount|floatformat:2 }}</span>
-                                    {% else %}
-                                        <span class="text-muted">N/A</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if receipt.purchased_at %}
-                                        {{ receipt.purchased_at|date:"M d, Y H:i" }}
-                                    {% else %}
-                                        <span class="text-muted">N/A</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if receipt.total_amount %}
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-check me-1"></i>Processed
-                                        </span>
-                                    {% else %}
-                                        <span class="badge bg-warning">
-                                            <i class="fas fa-clock me-1"></i>Pending
-                                        </span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="{% url 'receipts:receipt-detail' receipt.id %}" 
-                                           class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                onclick="deleteReceipt({{ receipt.id }})">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center py-4">
-                                    <div class="text-muted">
-                                        <i class="fas fa-inbox fa-3x mb-3"></i>
-                                        <h5>No receipts found</h5>
-                                        <p>Upload your first receipt to get started!</p>
-                                        <a href="{% url 'receipts:upload' %}" class="btn btn-primary">
-                                            <i class="fas fa-upload me-2"></i>Upload Receipt
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
+                            <!-- Filled by JavaScript -->
                         </tbody>
                     </table>
-                </div>
-
-                <!-- Pagination -->
-                {% if receipts.has_other_pages %}
-                <nav aria-label="Receipts pagination">
-                    <ul class="pagination justify-content-center">
-                        {% if receipts.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ receipts.previous_page_number }}">Previous</a>
-                            </li>
-                        {% endif %}
-                        
-                        {% for num in receipts.paginator.page_range %}
-                            {% if receipts.number == num %}
-                                <li class="page-item active">
-                                    <span class="page-link">{{ num }}</span>
-                                </li>
-                            {% elif num > receipts.number|add:'-3' and num < receipts.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                                </li>
-                            {% endif %}
-                        {% endfor %}
-                        
-                        {% if receipts.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ receipts.next_page_number }}">Next</a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Summary Cards -->
-<div class="row mt-4">
-    <div class="col-md-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Total Receipts</h6>
-                        <h3 class="mb-0">{{ receipts.count }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-receipt fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Total Amount</h6>
-                        <h3 class="mb-0">${{ total_amount|floatformat:2 }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-dollar-sign fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Processed</h6>
-                        <h3 class="mb-0">{{ processed_count }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-check-circle fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card bg-warning text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Pending</h6>
-                        <h3 class="mb-0">{{ pending_count }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-clock fa-2x"></i>
-                    </div>
                 </div>
             </div>
         </div>
@@ -223,94 +65,131 @@
 
 {% block extra_js %}
 <script>
-// Search functionality
-document.getElementById('searchInput').addEventListener('input', function() {
-    const searchTerm = this.value.toLowerCase();
-    const rows = document.querySelectorAll('#receiptsTableBody tr');
-    
-    rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchTerm) ? '' : 'none';
-    });
-});
+document.addEventListener('DOMContentLoaded', function () {
+    const token = localStorage.getItem('access_token');
+    const tableBody = document.getElementById('receiptsTableBody');
 
-// Filter functionality
-document.getElementById('statusFilter').addEventListener('change', function() {
-    const filterValue = this.value;
-    const rows = document.querySelectorAll('#receiptsTableBody tr');
-    
-    rows.forEach(row => {
-        if (!filterValue) {
-            row.style.display = '';
-            return;
-        }
-        
-        const statusCell = row.querySelector('td:nth-child(5)');
-        const status = statusCell.textContent.toLowerCase();
-        
-        if (filterValue === 'processed' && status.includes('processed')) {
-            row.style.display = '';
-        } else if (filterValue === 'pending' && status.includes('pending')) {
-            row.style.display = '';
-        } else if (filterValue === 'error' && status.includes('error')) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-});
-
-// Sort functionality
-document.getElementById('sortBy').addEventListener('change', function() {
-    const sortBy = this.value;
-    const tbody = document.getElementById('receiptsTableBody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    
-    rows.sort((a, b) => {
-        let aValue, bValue;
-        
-        switch(sortBy) {
-            case 'date':
-                aValue = a.querySelector('td:nth-child(4)').textContent;
-                bValue = b.querySelector('td:nth-child(4)').textContent;
-                return new Date(aValue) - new Date(bValue);
-            case 'amount':
-                aValue = parseFloat(a.querySelector('td:nth-child(3)').textContent.replace('$', '') || 0);
-                bValue = parseFloat(b.querySelector('td:nth-child(3)').textContent.replace('$', '') || 0);
-                return bValue - aValue;
-            case 'merchant':
-                aValue = a.querySelector('td:nth-child(2)').textContent.toLowerCase();
-                bValue = b.querySelector('td:nth-child(2)').textContent.toLowerCase();
-                return aValue.localeCompare(bValue);
-        }
-    });
-    
-    rows.forEach(row => tbody.appendChild(row));
-});
-
-// Delete receipt functionality
-function deleteReceipt(receiptId) {
-    if (confirm('Are you sure you want to delete this receipt?')) {
-        fetch(`/api/receipts/${receiptId}/`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                document.querySelector(`tr[data-receipt-id="${receiptId}"]`).remove();
-                location.reload(); // Refresh to update counts
-            } else {
-                alert('Error deleting receipt');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting receipt');
-        });
+    if (!token) {
+        alert('JWT token missing. Please log in.');
+        return;
     }
-}
+
+    fetch('/api/receipts/', {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(async (response) => {
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.detail || 'Failed to fetch receipts');
+        }
+        return response.json();
+    })
+    .then((data) => {
+        tableBody.innerHTML = '';
+        data.forEach(receipt => {
+            const row = document.createElement('tr');
+            row.setAttribute('data-receipt-id', receipt.id);
+            row.innerHTML = `
+                <td>${receipt.id}</td>
+                <td><strong>${receipt.merchant_name || 'Unknown'}</strong></td>
+                <td>${receipt.total_amount ?
+                    `<span class="badge bg-success">$${parseFloat(receipt.total_amount).toFixed(2)}</span>` :
+                    `<span class="text-muted">N/A</span>`}</td>
+                <td>${receipt.purchased_at ?
+                    new Date(receipt.purchased_at).toLocaleString() :
+                    `<span class="text-muted">N/A</span>`}</td>
+                <td>${receipt.total_amount ?
+                    `<span class="badge bg-success"><i class="fas fa-check me-1"></i>Processed</span>` :
+                    `<span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Pending</span>`}</td>
+                <td>
+                    <div class="btn-group">
+                        <a href="/receipts/${receipt.id}/" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReceipt(${receipt.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>`;
+            tableBody.appendChild(row);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching receipts:', error);
+        alert('Could not load receipts.');
+    });
+
+    // Delete function
+    window.deleteReceipt = function(receiptId) {
+        if (confirm('Are you sure you want to delete this receipt?')) {
+            fetch(`/api/receipts/${receiptId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.querySelector(`tr[data-receipt-id="${receiptId}"]`).remove();
+                } else {
+                    alert('Error deleting receipt.');
+                }
+            })
+            .catch(error => {
+                console.error('Delete error:', error);
+                alert('Failed to delete receipt.');
+            });
+        }
+    };
+
+    // Search
+    document.getElementById('searchInput').addEventListener('input', function () {
+        const term = this.value.toLowerCase();
+        const rows = tableBody.querySelectorAll('tr');
+        rows.forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+        });
+    });
+
+    // Filter
+    document.getElementById('statusFilter').addEventListener('change', function () {
+        const filter = this.value;
+        const rows = tableBody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const status = row.querySelector('td:nth-child(5)').textContent.toLowerCase();
+            if (!filter || status.includes(filter)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    // Sort
+    document.getElementById('sortBy').addEventListener('change', function () {
+        const sortBy = this.value;
+        const rows = Array.from(tableBody.querySelectorAll('tr'));
+
+        rows.sort((a, b) => {
+            const getValue = (row, idx) => row.querySelector(`td:nth-child(${idx})`).textContent.trim().toLowerCase();
+            if (sortBy === 'date') {
+                return new Date(getValue(a, 4)) - new Date(getValue(b, 4));
+            }
+            if (sortBy === 'amount') {
+                return parseFloat(getValue(b, 3).replace('$', '')) - parseFloat(getValue(a, 3).replace('$', ''));
+            }
+            if (sortBy === 'merchant') {
+                return getValue(a, 2).localeCompare(getValue(b, 2));
+            }
+        });
+
+        rows.forEach(row => tableBody.appendChild(row));
+    });
+});
 </script>
-{% endblock %} 
+{% endblock %}
